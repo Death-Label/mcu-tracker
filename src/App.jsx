@@ -14,6 +14,37 @@ const FONT_STYLE = `
   .note-expand { background: none; border: none; cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background 0.15s; }
   .note-expand:hover { background: rgba(255,255,255,0.08); }
 
+  @keyframes arcPulse {
+    0%, 100% { opacity: 0.042; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+    50%       { opacity: 0.075; transform: translate(-50%, -50%) scale(1.04) rotate(3deg); }
+  }
+  @keyframes arcCorePulse {
+    0%, 100% { opacity: 0.5; }
+    50%       { opacity: 1; }
+  }
+  @keyframes arcRingRotate {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+  @keyframes arcRingRotateRev {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(-360deg); }
+  }
+  .arc-bg {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 680px;
+    height: 680px;
+    pointer-events: none;
+    z-index: 0;
+    animation: arcPulse 4s ease-in-out infinite;
+  }
+  .arc-ring-cw  { transform-origin: 50% 50%; animation: arcRingRotate    22s linear infinite; }
+  .arc-ring-ccw { transform-origin: 50% 50%; animation: arcRingRotateRev 18s linear infinite; }
+  .arc-core     { animation: arcCorePulse 2s ease-in-out infinite; }
+  .tracker-wrap { position: relative; z-index: 1; }
+
   @media print {
     body { background: white !important; color: black !important; }
     .no-print { display: none !important; }
@@ -29,6 +60,81 @@ const FONT_STYLE = `
     .check-cell { color: black !important; }
   }
 `;
+
+
+// ---- Arc Reactor background component ----
+function ArcReactor() {
+  return (
+    <svg className="arc-bg no-print" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      {/* Outermost ring */}
+      <circle cx="100" cy="100" r="96" fill="none" stroke="#4fc3f7" strokeWidth="0.8" opacity="0.9"/>
+
+      {/* Outer dashed rotating ring */}
+      <g className="arc-ring-cw">
+        <circle cx="100" cy="100" r="88" fill="none" stroke="#4fc3f7" strokeWidth="0.8"
+          strokeDasharray="6 5" opacity="0.7"/>
+      </g>
+
+      {/* 8 outer tick marks */}
+      {[0,45,90,135,180,225,270,315].map(a => {
+        const r1=93, r2=97;
+        const rad = a * Math.PI / 180;
+        return <line key={a}
+          x1={100 + r1*Math.sin(rad)} y1={100 - r1*Math.cos(rad)}
+          x2={100 + r2*Math.sin(rad)} y2={100 - r2*Math.cos(rad)}
+          stroke="#4fc3f7" strokeWidth="1.5" opacity="0.9"/>;
+      })}
+
+      {/* 6 main blades (trapezoids) */}
+      {[0,60,120,180,240,300].map(a => (
+        <g key={a} transform={`rotate(${a}, 100, 100)`}>
+          <polygon points="91,52 109,52 105,28 95,28" fill="#4fc3f7" opacity="0.75"/>
+          {/* Blade edge highlight */}
+          <line x1="95" y1="28" x2="91" y2="52" stroke="#b3e5fc" strokeWidth="0.5" opacity="0.6"/>
+          <line x1="105" y1="28" x2="109" y2="52" stroke="#b3e5fc" strokeWidth="0.5" opacity="0.6"/>
+        </g>
+      ))}
+
+      {/* Counter-rotating inner dashed ring */}
+      <g className="arc-ring-ccw">
+        <circle cx="100" cy="100" r="74" fill="none" stroke="#4fc3f7" strokeWidth="0.8"
+          strokeDasharray="4 6" opacity="0.5"/>
+      </g>
+
+      {/* Inner solid ring */}
+      <circle cx="100" cy="100" r="48" fill="none" stroke="#4fc3f7" strokeWidth="1.5" opacity="0.85"/>
+
+      {/* 6 connector nodes on inner ring */}
+      {[0,60,120,180,240,300].map(a => {
+        const rad = a * Math.PI / 180;
+        return <circle key={a}
+          cx={100 + 48*Math.sin(rad)} cy={100 - 48*Math.cos(rad)}
+          r="2.5" fill="#4fc3f7" opacity="0.9"/>;
+      })}
+
+      {/* 6 radial lines from inner ring to center area */}
+      {[0,60,120,180,240,300].map(a => {
+        const rad = a * Math.PI / 180;
+        return <line key={a}
+          x1={100 + 48*Math.sin(rad)} y1={100 - 48*Math.cos(rad)}
+          x2={100 + 28*Math.sin(rad)} y2={100 - 28*Math.cos(rad)}
+          stroke="#4fc3f7" strokeWidth="0.8" opacity="0.5"/>;
+      })}
+
+      {/* Inner glow fill */}
+      <circle cx="100" cy="100" r="30" fill="#4fc3f7" opacity="0.08"/>
+
+      {/* Inner ring */}
+      <circle cx="100" cy="100" r="30" fill="none" stroke="#4fc3f7" strokeWidth="2" opacity="0.8"/>
+
+      {/* Core glow layers */}
+      <circle className="arc-core" cx="100" cy="100" r="20" fill="#4fc3f7" opacity="0.18"/>
+      <circle className="arc-core" cx="100" cy="100" r="13" fill="#7de8ff" opacity="0.4"/>
+      <circle cx="100" cy="100" r="7"  fill="#b3e5fc" opacity="0.9"/>
+      <circle cx="100" cy="100" r="3"  fill="white"   opacity="1"/>
+    </svg>
+  );
+}
 
 // ============================================================
 // MCU DATASET — Marvel Studios + Netflix Canon
@@ -327,6 +433,7 @@ export default function MCUTracker() {
     <>
       <style>{FONT_STYLE}</style>
       <div className="tracker-wrap" style={{ fontFamily:"'Barlow', sans-serif", background:"#080810", minHeight:"100vh", color:"#e0e0e0" }}>
+        <ArcReactor />
 
         {/* HEADER */}
         <div className="no-print" style={{ background:"linear-gradient(135deg, #0d0010 0%, #140020 40%, #0a0008 100%)", borderBottom:"2px solid #C0392B" }}>
